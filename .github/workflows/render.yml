@@ -65,6 +65,20 @@ jobs:
             quarto render "$notebook" --to pdf --execute
           done < changed_notebooks.txt
 
+      - name: Find generated PDFs
+        run: |
+          echo "Current directory:"
+          pwd
+
+          echo "Repository contents:"
+          ls -la
+
+          echo "PDF files:"
+          find . -type f -iname "*.pdf" -print
+
+          echo "Notebook directory:"
+          ls -la notebooks/
+
       - name: Upload generated PDFs
         uses: actions/upload-artifact@v4
         with:
