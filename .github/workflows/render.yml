@@ -69,7 +69,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: notebooks-pdf
-          path: |
-            notebooks/*.pdf
-            notebooks/**/*.pdf
-          if-no-files-found: warn
+          path: "**/*.pdf"
+          if-no-files-found: error
