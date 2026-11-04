@@ -8,6 +8,7 @@ on:
       - 'notebooks/*.ipynb'
       - 'notebooks/**/*.ipynb'
       - 'requirements.txt'
+
   workflow_dispatch:
 
 jobs:
@@ -15,11 +16,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Pobranie repozytorium
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      # 2. Wykrywanie zmienionych notebooków
       - name: Find changed notebooks
         id: changed
         env:
@@ -44,44 +47,46 @@ jobs:
           echo "Changed notebooks:"
           cat changed_notebooks.txt
 
+      # 3. Instalacja Quarto i LaTeX
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
         with:
           tinytex: true
 
+      # 4. Instalacja Pythona
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
+      # 5. Instalacja bibliotek
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
+      # 6. Renderowanie zmienionych notebooków
       - name: Render changed notebooks
         run: |
           while read -r notebook; do
             [ -z "$notebook" ] && continue
+
             echo "Rendering $notebook"
+
             quarto render "$notebook" --to pdf --execute
+
           done < changed_notebooks.txt
 
+      # 7. Diagnostyka wygenerowanych PDF
       - name: Find generated PDFs
         run: |
-          echo "Current directory:"
-          pwd
+          echo "Generated PDF files:"
+          find notebooks -type f -name "*.pdf" -print
 
-          echo "Repository contents:"
-          ls -la
-
-          echo "PDF files:"
-          find . -type f -iname "*.pdf" -print
-
-          echo "Notebook directory:"
-          ls -la notebooks/
-
+      # 8. Przesłanie PDF jako Artifact
       - name: Upload generated PDFs
         uses: actions/upload-artifact@v4
         with:
           name: notebooks-pdf
-          path: "**/*.pdf"
+          path: notebooks/*.pdf
           if-no-files-found: error
