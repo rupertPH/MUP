@@ -1,0 +1,4 @@
+ipykernel
+mbclient
+matplotlib
+PyMPDATA
