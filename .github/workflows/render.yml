@@ -1,0 +1,75 @@
+
+name: Render changed notebooks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'notebooks/*.ipynb'
+      - 'notebooks/**/*.ipynb'
+      - 'requirements.txt'
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find changed notebooks
+        id: changed
+        env:
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ] || \
+             [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            git ls-files 'notebooks/*.ipynb' 'notebooks/**/*.ipynb' > changed_notebooks.txt
+          else
+            git diff --name-only "$BASE" "$HEAD" \
+              -- 'notebooks/*.ipynb' 'notebooks/**/*.ipynb' \
+              | grep '\.ipynb$' \
+              | while read -r file; do
+                  if [ -f "$file" ]; then
+                    echo "$file"
+                  fi
+                done > changed_notebooks.txt
+          fi
+
+          echo "Changed notebooks:"
+          cat changed_notebooks.txt
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          tinytex: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Render changed notebooks
+        run: |
+          while read -r notebook; do
+            [ -z "$notebook" ] && continue
+            echo "Rendering $notebook"
+            quarto render "$notebook" --to pdf --execute
+          done < changed_notebooks.txt
+
+      - name: Upload generated PDFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebooks-pdf
+          path: |
+            notebooks/*.pdf
+            notebooks/**/*.pdf
+          if-no-files-found: warn
