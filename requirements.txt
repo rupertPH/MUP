@@ -4,3 +4,4 @@ nbclient
 mbclient
 matplotlib
 PyMPDATA
+open_atmos_jupyter_utils
